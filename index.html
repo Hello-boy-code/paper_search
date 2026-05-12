@@ -1,0 +1,810 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>论文语义搜索 Demo</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary: #2563EB;
+  --primary-dark: #1D4ED8;
+  --bg: #F8FAFC;
+  --card-bg: #fff;
+  --text: #1E293B;
+  --text-light: #64748B;
+  --text-lighter: #94A3B8;
+  --border: #E2E8F0;
+  --accent-green: #10B981;
+  --accent-orange: #F59E0B;
+  --accent-red: #EF4444;
+  --radius: 12px;
+  --shadow: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.08);
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* Header */
+.header {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  position: sticky; top: 0; z-index: 100;
+}
+
+.header .container { max-width: 960px; margin: 0 auto; padding: 0 24px; display: flex; align-items: center; gap: 12px; }
+.header .logo { font-size: 20px; font-weight: 700; color: var(--primary); }
+.header .badge {
+  font-size: 12px; padding: 2px 10px; border-radius: 20px;
+  background: #EFF6FF; color: var(--primary); font-weight: 500;
+}
+
+.ccf-nav-btn {
+  margin-left: auto; display: flex; align-items: center; gap: 6px;
+  padding: 6px 14px; background: #fff; border: 1px solid var(--border);
+  border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500;
+  color: var(--text); font-family: inherit; transition: var(--transition);
+}
+.ccf-nav-btn:hover { border-color: var(--primary); color: var(--primary); background: #EFF6FF; }
+.ccf-nav-btn .nav-arrow { font-size: 10px; transition: transform 0.25s; }
+.ccf-nav-btn.open .nav-arrow { transform: rotate(90deg); }
+.ccf-panel-wrapper {
+  background: var(--bg); border-bottom: 1px solid var(--border);
+  padding: 16px 0; max-height: 60vh; overflow-y: auto;
+}
+
+/* Main */
+.container { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+.hero { text-align: center; padding: 48px 0 32px; }
+.hero h1 { font-size: 36px; font-weight: 800; margin-bottom: 8px; }
+.hero h1 span { color: var(--primary); }
+.hero p { color: var(--text-light); font-size: 16px; }
+
+/* Search Box */
+.search-wrap { margin-bottom: 40px; }
+.search-box {
+  display: flex; gap: 12px; background: #fff; padding: 8px;
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  border: 2px solid transparent; transition: border 0.2s;
+}
+.search-box:focus-within { border-color: var(--primary); }
+
+.search-box input {
+  flex: 1; border: none; padding: 14px 16px; font-size: 16px;
+  outline: none; font-family: inherit; color: var(--text);
+}
+.search-box input::placeholder { color: var(--text-lighter); }
+
+.search-box button {
+  padding: 14px 32px; background: var(--primary); color: #fff;
+  border: none; border-radius: 8px; font-size: 16px; font-weight: 600;
+  cursor: pointer; white-space: nowrap; transition: background 0.2s;
+}
+.search-box button:hover { background: var(--primary-dark); }
+.search-box button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* Search hints */
+.search-hints { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.search-hint {
+  font-size: 13px; padding: 6px 14px; border-radius: 20px;
+  background: #fff; border: 1px solid var(--border); cursor: pointer;
+  color: var(--text-light); transition: all 0.15s;
+}
+.search-hint:hover { border-color: var(--primary); color: var(--primary); background: #EFF6FF; }
+
+/* Info bar */
+.info-bar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 20px; font-size: 14px; color: var(--text-light);
+}
+.info-bar strong { color: var(--text); }
+
+/* Results */
+.result-card {
+  background: var(--card-bg); border-radius: var(--radius);
+  padding: 24px; margin-bottom: 16px; box-shadow: var(--shadow);
+  border-left: 4px solid transparent; transition: border 0.2s, transform 0.15s;
+  cursor: pointer; position: relative;
+}
+.result-card:hover { border-left-color: var(--primary); transform: translateX(4px); }
+
+.result-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
+.result-title { font-size: 18px; font-weight: 700; color: var(--primary-dark); flex: 1; }
+.result-score { flex-shrink: 0; text-align: center; }
+
+.score-circle {
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px; font-weight: 700; color: #fff;
+}
+
+.score-circle.high { background: var(--accent-green); }
+.score-circle.mid { background: var(--accent-orange); }
+.score-circle.low { background: var(--accent-red); }
+
+.result-meta { font-size: 13px; color: var(--text-light); margin-bottom: 8px; }
+.result-meta .venue {
+  display: inline-block; background: #F1F5F9; padding: 2px 8px;
+  border-radius: 4px; font-weight: 600; color: var(--text); margin-right: 8px;
+}
+.result-meta .year { color: var(--text-lighter); }
+
+.result-abstract { font-size: 14px; color: var(--text-light); line-height: 1.7; margin-bottom: 8px; }
+.result-keywords { display: flex; gap: 6px; flex-wrap: wrap; }
+.result-keywords span {
+  font-size: 12px; padding: 2px 10px; border-radius: 12px;
+  background: #F8FAFC; color: var(--text-lighter); border: 1px solid var(--border);
+}
+
+/* Empty & Loading state */
+.empty-state { text-align: center; padding: 60px 0; }
+.empty-state .icon { font-size: 56px; margin-bottom: 12px; }
+.empty-state p { color: var(--text-light); }
+
+.loading { text-align: center; padding: 40px 0; }
+.spinner {
+  display: inline-block; width: 40px; height: 40px;
+  border: 3px solid var(--border); border-top-color: var(--primary);
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Keyword vs Semantic comparison */
+.comparison {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 20px; margin-bottom: 32px;
+}
+.comparison h3 { font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text); }
+.comparison-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.comparison-item {
+  padding: 10px 14px; border-radius: 8px; font-size: 13px;
+  display: flex; align-items: center; gap: 8px;
+}
+.comparison-item.keyword { background: #FEF2F2; }
+.comparison-item.semantic { background: #F0FDF4; }
+.comparison-item .tag {
+  font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 4px;
+}
+.comparison-item.keyword .tag { background: #FEE2E2; color: #DC2626; }
+.comparison-item.semantic .tag { background: #DCFCE7; color: #16A34A; }
+
+/* Footer */
+.footer { text-align: center; padding: 40px 0; color: var(--text-lighter); font-size: 13px; }
+
+/* ========== CCF Venue Panel ========== */
+.ccf-panel { margin-bottom: 28px; }
+
+.ccf-toggle-btn {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 14px 20px; background: #fff; border: 1px solid var(--border);
+  border-radius: var(--radius); cursor: pointer; font-size: 15px;
+  font-weight: 600; color: var(--text); font-family: inherit;
+  transition: var(--transition); text-align: left;
+}
+.ccf-toggle-btn:hover { border-color: var(--primary); background: #FAFBFC; }
+.ccf-toggle-btn .arrow { transition: transform 0.25s; font-size: 12px; color: var(--text-lighter); }
+.ccf-toggle-btn.open .arrow { transform: rotate(90deg); }
+.ccf-toggle-btn .badge-ccf {
+  font-size: 11px; padding: 2px 8px; border-radius: 4px;
+  background: #EFF6FF; color: var(--primary); font-weight: 600;
+}
+
+.ccf-content { display: none; margin-top: 12px; }
+.ccf-content.open { display: block; }
+
+.ccf-category {
+  background: #fff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  margin-bottom: 10px; overflow: hidden;
+}
+.ccf-cat-header {
+  display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+  cursor: pointer; user-select: none; transition: background 0.15s;
+}
+.ccf-cat-header:hover { background: #F8FAFC; }
+.ccf-cat-header .cat-arrow { font-size: 10px; color: var(--text-lighter); transition: transform 0.2s; }
+.ccf-cat-header.open .cat-arrow { transform: rotate(90deg); }
+.ccf-cat-header .cat-name { font-weight: 600; font-size: 14px; flex: 1; }
+.ccf-cat-header .cat-count { font-size: 12px; color: var(--text-lighter); }
+
+.ccf-cat-body { display: none; padding: 0 18px 14px; }
+.ccf-cat-body.open { display: block; }
+
+.ccf-tier { margin-bottom: 10px; }
+.ccf-tier-label {
+  display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px;
+  border-radius: 3px; margin-bottom: 6px; color: #fff;
+}
+.ccf-tier-label.A { background: #E53E3E; }
+.ccf-tier-label.B { background: #DD6B20; }
+.ccf-tier-label.C { background: #718096; }
+
+.ccf-venue-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.ccf-venue-tag {
+  font-size: 12px; padding: 3px 10px; border-radius: 14px;
+  background: #F7FAFC; border: 1px solid var(--border);
+  color: var(--text); white-space: nowrap; cursor: pointer;
+  transition: all 0.15s;
+}
+.ccf-venue-tag:hover { border-color: var(--primary); color: var(--primary); background: #EFF6FF; }
+.ccf-venue-tag .tier-dot {
+  display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px;
+}
+.ccf-venue-tag .tier-dot.A { background: #E53E3E; }
+.ccf-venue-tag .tier-dot.B { background: #DD6B20; }
+.ccf-venue-tag .tier-dot.C { background: #718096; }
+
+@media (max-width: 640px) {
+  .hero h1 { font-size: 26px; }
+  .result-header { flex-direction: column; }
+  .search-box { flex-direction: column; }
+  .search-box button { width: 100%; }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="container">
+    <span class="logo">SearchPaper</span>
+    <span class="badge">语义搜索 Demo</span>
+    <button class="ccf-nav-btn" id="ccfToggle" onclick="toggleCCF()">
+      <span class="nav-arrow">▶</span>
+      CCF 推荐列表
+    </button>
+  </div>
+</div>
+
+<!-- CCF Panel (hidden by default) -->
+<div class="ccf-panel-wrapper" id="ccfPanelWrapper" style="display:none;">
+  <div class="container">
+    <div class="ccf-panel">
+      <button class="ccf-toggle-btn" onclick="toggleCCF()" style="margin-bottom:10px;">
+        <span class="arrow" style="transform:rotate(90deg)">▶</span>
+        <span class="badge-ccf">CCF 推荐</span>
+        会议 / 期刊列表
+        <span style="font-size:12px;color:var(--text-lighter);margin-left:auto">点击收起</span>
+      </button>
+      <div class="ccf-content open" id="ccfContent">
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">人工智能</span>
+          <span class="cat-count">AI / ML / NLP / CV / Robotics</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>AAAI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>NeurIPS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ICML</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>IJCAI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ACL</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>CVPR</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ICCV</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>EMNLP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>NAACL</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>COLING</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ECCV</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ECAI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICRA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>AAMAS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>UAI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>CoNLL</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ACML</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>PRICAI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICONIP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICANN</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>BMVC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>3DV</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>WACV</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">计算机体系结构 / 高性能计算</span>
+          <span class="cat-count">Architecture / HPC / EDA</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ASPLOS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ISCA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>MICRO</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>SC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>HPCA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>DAC</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICCD</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICCAD</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>DATE</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>PACT</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>CGO</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>FPGA</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>CLUSTER</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ISPASS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>CASES</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>FCCM</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">计算机网络</span>
+          <span class="cat-count">Networking / Communications</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>SIGCOMM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>MobiCom</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>INFOCOM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>NSDI</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>SenSys</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>CoNEXT</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>SECON</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICNP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>IWQoS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>MobiSys</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>LCN</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>GLOBECOM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>WCNC</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">软件工程 / 系统软件 / 程序设计语言</span>
+          <span class="cat-count">SE / Systems / PL</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ICSE</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>FSE</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>SOSP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>OSDI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>PLDI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>POPL</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>USENIX ATC</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ASE</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ISSTA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>EuroSys</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>FAST</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>OOPSLA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ECOOP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>Middleware</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICPC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>SCAM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICSME</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>CCGrid</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">数据库 / 数据挖掘</span>
+          <span class="cat-count">Databases / Data Mining</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>SIGMOD</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>VLDB</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>KDD</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ICDE</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>CIKM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>WSDM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICDM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>SDM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>DASFAA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>EDBT</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>PAKDD</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>APWeb-WAIM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>DEXA</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">计算机理论 / 算法</span>
+          <span class="cat-count">Theory / Algorithms</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>STOC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>FOCS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>LICS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>CAV</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>SODA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>SPAA</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICALP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>CONCUR</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>TACAS</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ISAAC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>COCOON</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>MFCS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>IPCO</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">网络与信息安全</span>
+          <span class="cat-count">Security / Privacy</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>IEEE S&P</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>CCS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>USENIX Security</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>NDSS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>CRYPTO</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>EUROCRYPT</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ACSAC</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ASIACRYPT</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ESORICS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>DSN</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>RAID</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>PETS</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ACNS</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>SecureComm</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICICS</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">计算机图形学 / 多媒体</span>
+          <span class="cat-count">Graphics / Multimedia</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>SIGGRAPH</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>ACM MM</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>IEEE VIS</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>Eurographics</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICMR</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>ICME</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>MMSys</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>CGI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>ICIP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>MIPR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ccf-category">
+        <div class="ccf-cat-header" onclick="toggleCategory(this)">
+          <span class="cat-arrow">▶</span>
+          <span class="cat-name">人机交互 / 普适计算</span>
+          <span class="cat-count">HCI / Ubicomp</span>
+        </div>
+        <div class="ccf-cat-body">
+          <div class="ccf-tier">
+            <span class="ccf-tier-label A">CCF-A</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>CHI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>UbiComp</span>
+              <span class="ccf-venue-tag"><span class="tier-dot A"></span>CSCW</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label B">CCF-B</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>IUI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>MobileHCI</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>GROUP</span>
+              <span class="ccf-venue-tag"><span class="tier-dot B"></span>DIS</span>
+            </div>
+          </div>
+          <div class="ccf-tier">
+            <span class="ccf-tier-label C">CCF-C</span>
+            <div class="ccf-venue-list">
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>INTERACT</span>
+              <span class="ccf-venue-tag"><span class="tier-dot C"></span>VR</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <h1>论文<span>语义</span>搜索引擎</h1>
+    <p>不是关键词匹配，而是理解你的需求，找到真正相关的论文</p>
+  </div>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <input
+        type="text" id="queryInput"
+        placeholder="用自然语言描述你想找什么，例如：用神经网络做图片分类的方法"
+        onkeydown="if(event.key==='Enter')doSearch()"
+      >
+      <button id="searchBtn" onclick="doSearch()">搜索</button>
+    </div>
+    <div class="search-hints">
+      <span class="search-hint" onclick="setQuery('从文字描述生成图像')">从文字描述生成图像</span>
+      <span class="search-hint" onclick="setQuery('分布式系统共识算法')">分布式系统共识算法</span>
+      <span class="search-hint" onclick="setQuery('在加密数据上直接计算')">在加密数据上直接计算</span>
+      <span class="search-hint" onclick="setQuery('privacy preserving machine learning')">隐私保护的机器学习</span>
+      <span class="search-hint" onclick="setQuery('distributed storage for big data')">大数据分布式存储</span>
+    </div>
+  </div>
+
+  <!-- Comparison panels (shown after search) -->
+  <div class="comparison" id="comparison" style="display:none">
+    <h3>搜索对比：同一个查询，两种不同的结果</h3>
+    <div class="comparison-grid">
+      <div class="comparison-item keyword">
+        <span class="tag">关键词匹配</span>
+        <span id="keywordResult">只能找到标题包含完全相同单词的论文</span>
+      </div>
+      <div class="comparison-item semantic">
+        <span class="tag">语义搜索</span>
+        <span id="semanticResult">发现语义相关但用词不同的论文</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="info-bar" id="infoBar" style="display:none">
+    <span>找到 <strong id="resultCount">0</strong> 篇相关论文</span>
+    <span>搜索词: "<strong id="queryDisplay"></strong>"</span>
+  </div>
+
+  <div id="results">
+    <div class="empty-state" id="emptyState">
+      <div class="icon">Search</div>
+      <p>输入搜索需求，或点击上方推荐搜索试试</p>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <p>基于 sentence-transformers 语义向量 + 余弦相似度检索 | Demo 包含 32 篇论文</p>
+</div>
+
+<script>
+// ── Deploy: change this to your Hugging Face Spaces URL ──
+// e.g. 'https://yourname-paper-search.hf.space'
+// Local dev: 'http://127.0.0.1:7860'
+const API = 'https://flyingpig1234-paper-search.hf.space';
+
+/* ========== CCF Panel Toggle ========== */
+function toggleCCF() {
+  const wrapper = document.getElementById('ccfPanelWrapper');
+  const btn = document.getElementById('ccfToggle');
+  const isOpen = wrapper.style.display !== 'none';
+  if (isOpen) {
+    wrapper.style.display = 'none';
+    btn.classList.remove('open');
+  } else {
+    wrapper.style.display = 'block';
+    btn.classList.add('open');
+  }
+}
+
+function toggleCategory(header) {
+  const isOpen = header.classList.toggle('open');
+  header.nextElementSibling.classList.toggle('open', isOpen);
+}
+
+function setQuery(text) {
+  document.getElementById('queryInput').value = text;
+  doSearch();
+}
+
+function scoreClass(score) {
+  if (score >= 45) return 'high';
+  if (score >= 25) return 'mid';
+  return 'low';
+}
+
+async function doSearch() {
+  const q = document.getElementById('queryInput').value.trim();
+  if (!q) return;
+
+  const btn = document.getElementById('searchBtn');
+  const resultsDiv = document.getElementById('results');
+  const emptyState = document.getElementById('emptyState');
+  const infoBar = document.getElementById('infoBar');
+  const comparison = document.getElementById('comparison');
+
+  btn.disabled = true;
+  btn.textContent = '搜索中...';
+  resultsDiv.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  try {
+    const resp = await fetch(`${API}/search?q=${encodeURIComponent(q)}`);
+    const data = await resp.json();
+
+    btn.disabled = false;
+    btn.textContent = '搜索';
+
+    if (!data.results || data.results.length === 0) {
+      resultsDiv.innerHTML = '<div class="empty-state"><div class="icon">No Results</div><p>未找到相关论文，尝试用其他表述方式</p></div>';
+      infoBar.style.display = 'none';
+      comparison.style.display = 'none';
+      return;
+    }
+
+    // Show info bar
+    infoBar.style.display = 'flex';
+    document.getElementById('resultCount').textContent = data.results.length;
+    document.getElementById('queryDisplay').textContent = data.query;
+
+    // Show comparison
+    comparison.style.display = 'block';
+    const topTitle = data.results[0].title;
+    const qLower = q.toLowerCase();
+    const hasExactKeyword = data.results[0].keywords.toLowerCase()
+      .split(',').some(k => qLower.includes(k.trim().toLowerCase())) ||
+      data.results[0].title.toLowerCase().split(' ').some(w => qLower.includes(w.toLowerCase()));
+    document.getElementById('keywordResult').textContent = hasExactKeyword
+      ? '关键词匹配也能找到部分结果，但无法理解语义相近但用词不同的论文'
+      : `关键词匹配: 找不到「${topTitle.substring(0, 35)}...」—— 因为标题和关键词中没有匹配你输入的词语`;
+    document.getElementById('semanticResult').textContent = `语义搜索: 理解查询意图，将语义最相关的「${topTitle}」排在首位（相似度 ${data.results[0].similarity}%）`;
+
+    // Render results
+    resultsDiv.innerHTML = data.results.map(p => `
+      <div class="result-card" onclick="this.classList.toggle('expanded')">
+        <div class="result-header">
+          <div class="result-title">${p.title}</div>
+          <div class="result-score">
+            <div class="score-circle ${scoreClass(p.similarity)}">${p.similarity}%</div>
+          </div>
+        </div>
+        <div class="result-meta">
+          <span class="venue">${p.venue}</span>
+          <span class="year">${p.year}</span> &middot;
+          <span>${p.authors}</span>
+        </div>
+        <div class="result-abstract">${p.abstract.substring(0, 200)}${p.abstract.length > 200 ? '...' : ''}</div>
+        <div class="result-keywords">${p.keywords.split(',').map(k => `<span>${k.trim()}</span>`).join('')}</div>
+      </div>
+    `).join('');
+
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = '搜索';
+    resultsDiv.innerHTML = `
+      <div class="empty-state">
+        <div class="icon">Connection Error</div>
+        <p>无法连接到后端服务</p>
+        <p style="font-size:13px;margin-top:8px">请先运行 <code>python backend.py</code> 启动服务</p>
+      </div>`;
+    infoBar.style.display = 'none';
+  }
+}
+</script>
+
+</body>
+</html>
