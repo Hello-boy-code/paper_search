@@ -118,7 +118,23 @@ body {
 .result-card:hover { border-left-color: var(--primary); transform: translateX(4px); }
 
 .result-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 8px; }
-.result-title { font-size: 18px; font-weight: 700; color: var(--primary-dark); flex: 1; }
+.result-title { font-size: 18px; font-weight: 700; color: var(--primary-dark); flex: 1; position: relative; }
+.result-title .title-tooltip {
+  display: none; position: absolute; top: 100%; left: 0; z-index: 200;
+  background: #1E293B; color: #F1F5F9; padding: 20px; border-radius: 10px;
+  width: 440px; max-width: 90vw; box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  font-size: 13px; font-weight: 400; line-height: 1.7; white-space: normal;
+  pointer-events: none;
+}
+.result-title .title-tooltip .tt-title { font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 10px; }
+.result-title .title-tooltip .tt-meta { color: #94A3B8; margin-bottom: 8px; }
+.result-title .title-tooltip .tt-abstract { color: #CBD5E1; }
+.result-title .title-tooltip .tt-keywords { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+.result-title .title-tooltip .tt-keywords span {
+  font-size: 11px; padding: 2px 8px; border-radius: 10px;
+  background: rgba(255,255,255,0.1); color: #94A3B8;
+}
+.result-title:hover .title-tooltip { display: block; }
 .result-score { flex-shrink: 0; text-align: center; }
 
 .score-circle {
@@ -799,7 +815,14 @@ async function doSearch() {
     resultsDiv.innerHTML = filtered.map(p => `
       <div class="result-card" onclick="this.classList.toggle('expanded')">
         <div class="result-header">
-          <div class="result-title">${p.title}</div>
+          <div class="result-title">${p.title}
+            <div class="title-tooltip">
+              <div class="tt-title">${p.title}</div>
+              <div class="tt-meta">${p.authors} &middot; ${p.venue} ${p.year}</div>
+              <div class="tt-abstract">${p.abstract}</div>
+              <div class="tt-keywords">${p.keywords.split(',').map(k => `<span>${k.trim()}</span>`).join('')}</div>
+            </div>
+          </div>
           <div class="result-score">
             <div class="score-circle ${scoreClass(p.similarity)}">${p.similarity}%</div>
           </div>
