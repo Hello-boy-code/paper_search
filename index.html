@@ -767,25 +767,36 @@ async function doSearch() {
       return;
     }
 
+    // Filter by minimum similarity threshold (45%)
+    const MIN_SIMILARITY = 45;
+    const filtered = data.results.filter(p => p.similarity >= MIN_SIMILARITY);
+
+    if (filtered.length === 0) {
+      resultsDiv.innerHTML = `<div class="empty-state"><div class="icon">No Results</div><p>未找到相似度 ≥ ${MIN_SIMILARITY}% 的论文，尝试用其他表述方式</p></div>`;
+      infoBar.style.display = 'none';
+      comparison.style.display = 'none';
+      return;
+    }
+
     // Show info bar
     infoBar.style.display = 'flex';
-    document.getElementById('resultCount').textContent = data.results.length;
+    document.getElementById('resultCount').textContent = filtered.length;
     document.getElementById('queryDisplay').textContent = data.query;
 
     // Show comparison
     comparison.style.display = 'block';
-    const topTitle = data.results[0].title;
+    const topTitle = filtered[0].title;
     const qLower = q.toLowerCase();
-    const hasExactKeyword = data.results[0].keywords.toLowerCase()
+    const hasExactKeyword = filtered[0].keywords.toLowerCase()
       .split(',').some(k => qLower.includes(k.trim().toLowerCase())) ||
-      data.results[0].title.toLowerCase().split(' ').some(w => qLower.includes(w.toLowerCase()));
+      filtered[0].title.toLowerCase().split(' ').some(w => qLower.includes(w.toLowerCase()));
     document.getElementById('keywordResult').textContent = hasExactKeyword
       ? '关键词匹配也能找到部分结果，但无法理解语义相近但用词不同的论文'
       : `关键词匹配: 找不到「${topTitle.substring(0, 35)}...」—— 因为标题和关键词中没有匹配你输入的词语`;
-    document.getElementById('semanticResult').textContent = `语义搜索: 理解查询意图，将语义最相关的「${topTitle}」排在首位（相似度 ${data.results[0].similarity}%）`;
+    document.getElementById('semanticResult').textContent = `语义搜索: 理解查询意图，将语义最相关的「${topTitle}」排在首位（相似度 ${filtered[0].similarity}%）`;
 
     // Render results
-    resultsDiv.innerHTML = data.results.map(p => `
+    resultsDiv.innerHTML = filtered.map(p => `
       <div class="result-card" onclick="this.classList.toggle('expanded')">
         <div class="result-header">
           <div class="result-title">${p.title}</div>
