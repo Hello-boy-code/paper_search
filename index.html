@@ -689,7 +689,7 @@ body {
 </div>
 
 <div class="footer">
-  <p>基于 sentence-transformers 语义向量 + 余弦相似度检索 | Demo 包含 32 篇论文</p>
+  <p>基于 sentence-transformers 语义向量 + 余弦相似度检索 | Demo 包含 <strong id="paperCount">...</strong> 篇论文</p>
 </div>
 
 <script>
@@ -697,6 +697,17 @@ body {
 // e.g. 'https://yourname-paper-search.hf.space'
 // Local dev: 'http://127.0.0.1:7860'
 const API = 'https://flyingpig1234-paper-search.hf.space';
+
+// Fetch paper count from API on page load
+(async function updatePaperCount() {
+  try {
+    const resp = await fetch(API);
+    const data = await resp.json();
+    document.getElementById('paperCount').textContent = data.papers || '...';
+  } catch (e) {
+    document.getElementById('paperCount').textContent = '...';
+  }
+})();
 
 /* ========== CCF Panel Toggle ========== */
 function toggleCCF() {
